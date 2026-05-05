@@ -1,0 +1,541 @@
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+// =============================================================
+// SIOVIM - Sistema Integrado de Operaciones de Viajes Vive Mar
+// Pilares POO: Abstracción, Encapsulamiento, Herencia, Polimorfismo
+// =============================================================
+
+
+// ---------------------------------------------------------------
+// 1. ABSTRACCIÓN — clase abstracta base Usuario
+//    Define el contrato común para Cliente y Empleado
+// ---------------------------------------------------------------
+abstract class Usuario {
+
+    // ENCAPSULAMIENTO — atributos privados, acceso solo por getters/setters
+    private int    id;
+    private String nombre;
+    private String correo;
+    private String telefono;
+
+    public Usuario(int id, String nombre, String correo, String telefono) {
+        this.id       = id;
+        this.nombre   = nombre;
+        this.correo   = correo;
+        this.telefono = telefono;
+    }
+
+    // Getters
+    public int    getId()       { return id; }
+    public String getNombre()   { return nombre; }
+    public String getCorreo()   { return correo; }
+    public String getTelefono() { return telefono; }
+
+    // Setters
+    public void setNombre(String nombre)     { this.nombre   = nombre; }
+    public void setCorreo(String correo)     { this.correo   = correo; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
+
+    // ABSTRACCIÓN — método abstracto que cada subclase debe implementar
+    public abstract boolean autenticar(String clave);
+
+    // Método concreto compartido
+    public void actualizarPerfil(String nombre, String correo, String telefono) {
+        this.nombre   = nombre;
+        this.correo   = correo;
+        this.telefono = telefono;
+        System.out.println("Perfil actualizado para: " + this.nombre);
+    }
+
+    @Override
+    public String toString() {
+        return "[" + getClass().getSimpleName() + "] id=" + id + " | " + nombre + " | " + correo;
+    }
+}
+
+
+// ---------------------------------------------------------------
+// 2. HERENCIA — Cliente extiende Usuario
+// ---------------------------------------------------------------
+class Cliente extends Usuario {
+
+    private String preferencias;   // ej: "playa, avistamiento ballenas"
+    private String documento;      // cédula o pasaporte
+    private List<Reserva> reservas;
+
+    public Cliente(int id, String nombre, String correo, String telefono,
+                   String preferencias, String documento) {
+        super(id, nombre, correo, telefono);   // llama al constructor del padre
+        this.preferencias = preferencias;
+        this.documento    = documento;
+        this.reservas     = new ArrayList<>();
+    }
+
+    // POLIMORFISMO — implementación concreta del método abstracto
+    @Override
+    public boolean autenticar(String clave) {
+        // Lógica simplificada: el documento actúa como clave
+        boolean ok = this.documento.equals(clave);
+        System.out.println("Autenticación cliente " + getNombre() + ": " + (ok ? "OK" : "FALLIDA"));
+        return ok;
+    }
+
+    public void solicitarReserva(Reserva reserva) {
+        reservas.add(reserva);
+        System.out.println("Reserva " + reserva.getIdReserva() + " agregada al cliente " + getNombre());
+    }
+
+    public List<Reserva> verReservas() { return reservas; }
+
+    public void consultarVoucher(String idReserva) {
+        reservas.stream()
+                .filter(r -> r.getIdReserva().equals(idReserva))
+                .findFirst()
+                .ifPresentOrElse(
+                    r -> System.out.println("VOUCHER — " + r),
+                    ()  -> System.out.println("Reserva no encontrada: " + idReserva)
+                );
+    }
+
+    public String getPreferencias() { return preferencias; }
+    public String getDocumento()    { return documento; }
+}
+
+
+// ---------------------------------------------------------------
+// 3. HERENCIA — Empleado extiende Usuario
+// ---------------------------------------------------------------
+class Empleado extends Usuario {
+
+    private String cargo;
+    private double salario;
+
+    public Empleado(int id, String nombre, String correo, String telefono,
+                    String cargo, double salario) {
+        super(id, nombre, correo, telefono);
+        this.cargo   = cargo;
+        this.salario = salario;
+    }
+
+    // POLIMORFISMO — implementación concreta del método abstracto
+    @Override
+    public boolean autenticar(String clave) {
+        // Lógica simplificada basada en cargo + id
+        String claveEsperada = cargo.substring(0, 3).toUpperCase() + getId();
+        boolean ok = claveEsperada.equals(clave);
+        System.out.println("Autenticación empleado " + getNombre() + ": " + (ok ? "OK" : "FALLIDA"));
+        return ok;
+    }
+
+    public void gestionarReserva(Reserva reserva) {
+        System.out.println(getNombre() + " gestionando reserva: " + reserva.getIdReserva());
+    }
+
+    public void generarReporte() {
+        System.out.println(getNombre() + " (" + cargo + ") generando reporte operativo...");
+    }
+
+    public String getCargo()   { return cargo; }
+    public double getSalario() { return salario; }
+}
+
+
+// ---------------------------------------------------------------
+// 4. HERENCIA — Administrador extiende Empleado (2.º nivel)
+// ---------------------------------------------------------------
+class Administrador extends Empleado {
+
+    private int nivelAcceso;   // 1=básico … 3=total
+
+    public Administrador(int id, String nombre, String correo, String telefono,
+                         double salario, int nivelAcceso) {
+        super(id, nombre, correo, telefono, "Administrador", salario);
+        this.nivelAcceso = nivelAcceso;
+    }
+
+    // POLIMORFISMO — override especializado
+    @Override
+    public void generarReporte() {
+        System.out.println("[ADMIN nivel " + nivelAcceso + "] " + getNombre()
+                + " → reporte completo con métricas financieras y operativas.");
+    }
+
+    public void crearPaquete(PaqueteTuristico paquete) {
+        System.out.println("Paquete '" + paquete.getNombre() + "' creado por " + getNombre());
+    }
+
+    public void gestionarUsuarios(Usuario usuario, String accion) {
+        System.out.println(getNombre() + " → acción '" + accion
+                + "' sobre usuario: " + usuario.getNombre());
+    }
+
+    public int getNivelAcceso() { return nivelAcceso; }
+}
+
+
+// ---------------------------------------------------------------
+// 5. HERENCIA — AgenteReservas extiende Empleado (2.º nivel)
+// ---------------------------------------------------------------
+class AgenteReservas extends Empleado {
+
+    private double metaVentas;   // cuota mensual en COP
+
+    public AgenteReservas(int id, String nombre, String correo, String telefono,
+                          double salario, double metaVentas) {
+        super(id, nombre, correo, telefono, "Agente de Reservas", salario);
+        this.metaVentas = metaVentas;
+    }
+
+    // POLIMORFISMO — comportamiento especializado
+    @Override
+    public void gestionarReserva(Reserva reserva) {
+        System.out.println("[AGENTE] " + getNombre()
+                + " procesando reserva " + reserva.getIdReserva()
+                + " | estado: " + reserva.getEstado());
+    }
+
+    public void confirmarPago(Reserva reserva) {
+        boolean pagado = reserva.confirmarPago();
+        System.out.println("Pago " + (pagado ? "confirmado" : "pendiente")
+                + " para reserva " + reserva.getIdReserva());
+    }
+
+    public void emitirVoucher(Reserva reserva) {
+        if (reserva.getEstado() == EstadoReserva.CONFIRMADA) {
+            System.out.println("=== VOUCHER ===\n" + reserva + "\n===============");
+        } else {
+            System.out.println("No se puede emitir voucher — reserva no confirmada.");
+        }
+    }
+
+    public double getMetaVentas() { return metaVentas; }
+}
+
+
+// ---------------------------------------------------------------
+// 6. ENUM — estados posibles de una reserva
+//    (abstracción de dominio, evita strings mágicos)
+// ---------------------------------------------------------------
+enum EstadoReserva {
+    PRERRESERVA,
+    PENDIENTE_PAGO,
+    CONFIRMADA,
+    LISTA_ESPERA,
+    CANCELADA
+}
+
+
+// ---------------------------------------------------------------
+// 7. CLASE — Reserva
+// ---------------------------------------------------------------
+class Reserva {
+
+    // ENCAPSULAMIENTO — todos los atributos privados
+    private String        idReserva;
+    private LocalDate     fecha;
+    private EstadoReserva estado;
+    private int           totalPersonas;
+    private Cliente       cliente;
+    private PaqueteTuristico paquete;
+    private Pago          pago;
+
+    public Reserva(String idReserva, LocalDate fecha,
+                   int totalPersonas, Cliente cliente, PaqueteTuristico paquete) {
+        this.idReserva     = idReserva;
+        this.fecha         = fecha;
+        this.totalPersonas = totalPersonas;
+        this.cliente       = cliente;
+        this.paquete       = paquete;
+        this.estado        = EstadoReserva.PRERRESERVA;
+    }
+
+    public boolean create() {
+        if (paquete.verificarDisponibilidad(totalPersonas)) {
+            this.estado = EstadoReserva.PENDIENTE_PAGO;
+            System.out.println("Reserva " + idReserva + " creada — esperando pago.");
+            return true;
+        }
+        this.estado = EstadoReserva.LISTA_ESPERA;
+        System.out.println("Sin cupos — reserva " + idReserva + " en lista de espera.");
+        return false;
+    }
+
+    public boolean confirmarPago() {
+        if (pago != null && pago.procesar()) {
+            this.estado = EstadoReserva.CONFIRMADA;
+            paquete.actualizarCupos(totalPersonas);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean confirm() {
+        if (this.estado == EstadoReserva.CONFIRMADA) {
+            System.out.println("Reserva " + idReserva + " confirmada y lista para operación.");
+            return true;
+        }
+        System.out.println("No se puede confirmar — estado actual: " + estado);
+        return false;
+    }
+
+    public void asignarPago(Pago pago) { this.pago = pago; }
+
+    // Getters
+    public String        getIdReserva()     { return idReserva; }
+    public LocalDate     getFecha()         { return fecha; }
+    public EstadoReserva getEstado()        { return estado; }
+    public int           getTotalPersonas() { return totalPersonas; }
+    public Cliente       getCliente()       { return cliente; }
+    public PaqueteTuristico getPaquete()    { return paquete; }
+
+    @Override
+    public String toString() {
+        return "Reserva[" + idReserva + "] | " + fecha
+                + " | " + totalPersonas + " pax"
+                + " | Estado: " + estado
+                + " | Paquete: " + paquete.getNombre()
+                + " | Cliente: " + cliente.getNombre();
+    }
+}
+
+
+// ---------------------------------------------------------------
+// 8. CLASE — PaqueteTuristico
+// ---------------------------------------------------------------
+class PaqueteTuristico {
+
+    private int     idPaquete;
+    private String  nombre;
+    private double  precioBase;
+    private int     cuposDisponibles;
+
+    public PaqueteTuristico(int idPaquete, String nombre,
+                            double precioBase, int cuposDisponibles) {
+        this.idPaquete        = idPaquete;
+        this.nombre           = nombre;
+        this.precioBase       = precioBase;
+        this.cuposDisponibles = cuposDisponibles;
+    }
+
+    public double calcularTarifa(int personas) {
+        // Descuento del 5 % para grupos de 5 o más
+        double tarifa = precioBase * personas;
+        if (personas >= 5) tarifa *= 0.95;
+        return tarifa;
+    }
+
+    public boolean verificarDisponibilidad(int personas) {
+        return cuposDisponibles >= personas;
+    }
+
+    public void actualizarCupos(int personasReservadas) {
+        if (cuposDisponibles >= personasReservadas) {
+            cuposDisponibles -= personasReservadas;
+            System.out.println("Cupos actualizados — disponibles: " + cuposDisponibles);
+        }
+    }
+
+    public int    getIdPaquete()        { return idPaquete; }
+    public String getNombre()           { return nombre; }
+    public double getPrecioBase()       { return precioBase; }
+    public int    getCuposDisponibles() { return cuposDisponibles; }
+
+    @Override
+    public String toString() {
+        return "Paquete[" + idPaquete + "] " + nombre
+                + " | $" + precioBase + " | cupos: " + cuposDisponibles;
+    }
+}
+
+
+// ---------------------------------------------------------------
+// 9. CLASE — Pago
+// ---------------------------------------------------------------
+class Pago {
+
+    private int    idPago;
+    private double monto;
+    private String metodo;    // "transferencia", "PSE", "efectivo"
+    private String estado;    // "pendiente", "procesado", "rechazado"
+
+    public Pago(int idPago, double monto, String metodo) {
+        this.idPago  = idPago;
+        this.monto   = monto;
+        this.metodo  = metodo;
+        this.estado  = "pendiente";
+    }
+
+    public boolean registrar() {
+        System.out.println("Pago " + idPago + " registrado por $" + monto + " vía " + metodo);
+        return true;
+    }
+
+    public boolean validar() {
+        // Validación básica: monto positivo
+        return monto > 0;
+    }
+
+    public boolean procesar() {
+        if (validar()) {
+            this.estado = "procesado";
+            System.out.println("Pago " + idPago + " procesado exitosamente.");
+            return true;
+        }
+        this.estado = "rechazado";
+        System.out.println("Pago " + idPago + " rechazado — monto inválido.");
+        return false;
+    }
+
+    public int    getIdPago()  { return idPago; }
+    public double getMonto()   { return monto; }
+    public String getMetodo()  { return metodo; }
+    public String getEstado()  { return estado; }
+
+    @Override
+    public String toString() {
+        return "Pago[" + idPago + "] $" + monto + " | " + metodo + " | " + estado;
+    }
+}
+
+
+// ---------------------------------------------------------------
+// 10. INTERFACE — contrato para proveedores externos
+//     (abstracción de servicio, desacopla implementaciones)
+// ---------------------------------------------------------------
+interface Servicioexterno {
+    boolean confirmarServicio(String idReserva);
+}
+
+
+// ---------------------------------------------------------------
+// 11. CLASE — Proveedor implementa ServicioExterno
+// ---------------------------------------------------------------
+class Proveedor implements Servicioexterno {
+
+    private int    idProveedor;
+    private String tipo;    // "hotel", "transporte", "guía"
+    private String sla;     // ej: "respuesta en 2h"
+
+    public Proveedor(int idProveedor, String tipo, String sla) {
+        this.idProveedor = idProveedor;
+        this.tipo        = tipo;
+        this.sla         = sla;
+    }
+
+    // POLIMORFISMO — implementación de la interfaz
+    @Override
+    public boolean confirmarServicio(String idReserva) {
+        System.out.println("Proveedor [" + tipo + "] confirmando servicio para reserva " + idReserva
+                + " (SLA: " + sla + ")");
+        return true;  // simulación de confirmación exitosa
+    }
+
+    public int    getIdProveedor() { return idProveedor; }
+    public String getTipo()        { return tipo; }
+    public String getSla()         { return sla; }
+
+    @Override
+    public String toString() {
+        return "Proveedor[" + idProveedor + "] " + tipo + " | SLA: " + sla;
+    }
+}
+
+
+// ---------------------------------------------------------------
+// 12. CLASE PRINCIPAL — demostración del sistema completo
+// ---------------------------------------------------------------
+public class SIOVIM {
+
+    public static void main(String[] args) {
+
+        System.out.println("======================================");
+        System.out.println("  SIOVIM — Viajes Vive Mar");
+        System.out.println("======================================\n");
+
+        // --- Paquete turístico ---
+        PaqueteTuristico ballenas = new PaqueteTuristico(
+                1, "Avistamiento de Ballenas Nuquí 4D/3N", 1_850_000.0, 12);
+        System.out.println("Paquete creado: " + ballenas);
+        System.out.println("Tarifa para 3 personas: $" + ballenas.calcularTarifa(3));
+        System.out.println("Tarifa para 6 personas (descuento grupo): $" + ballenas.calcularTarifa(6));
+        System.out.println();
+
+        // --- Cliente ---
+        Cliente lucia = new Cliente(
+                101, "Lucía Martínez", "lucia@mail.com", "3001234567",
+                "naturaleza, fotografía", "1098765432");
+        System.out.println("Cliente registrado: " + lucia);
+        lucia.autenticar("1098765432");   // correcto
+        lucia.autenticar("wrongpass");    // incorrecto
+        System.out.println();
+
+        // --- Reserva ---
+        Reserva reserva1 = new Reserva(
+                "RES-2025-001", LocalDate.of(2025, 8, 15), 3, lucia, ballenas);
+        boolean creada = reserva1.create();
+        System.out.println();
+
+        // --- Pago ---
+        if (creada) {
+            Pago pago1 = new Pago(501, ballenas.calcularTarifa(3), "PSE");
+            pago1.registrar();
+            reserva1.asignarPago(pago1);
+            reserva1.confirmarPago();
+            reserva1.confirm();
+            System.out.println();
+        }
+
+        // --- Vincular reserva al cliente ---
+        lucia.solicitarReserva(reserva1);
+        lucia.consultarVoucher("RES-2025-001");
+        System.out.println();
+
+        // --- Empleados: POLIMORFISMO en acción ---
+        Administrador gerente = new Administrador(
+                201, "Carlos Vives", "carlos@vivesmar.co", "3109876543",
+                4_500_000.0, 3);
+
+        AgenteReservas agente = new AgenteReservas(
+                202, "Diana Ríos", "diana@vivesmar.co", "3154443322",
+                2_800_000.0, 15_000_000.0);
+
+        // POLIMORFISMO — mismo método, comportamiento diferente según subclase
+        System.out.println("--- Polimorfismo: autenticar() ---");
+        gerente.autenticar("ADM201");   // clave válida para Administrador
+        agente.autenticar("AGE202");    // clave válida para AgenteReservas
+        System.out.println();
+
+        // POLIMORFISMO — generarReporte() y gestionarReserva()
+        System.out.println("--- Polimorfismo: generarReporte() ---");
+        gerente.generarReporte();
+        agente.generarReporte();        // hereda comportamiento de Empleado
+        System.out.println();
+
+        System.out.println("--- Polimorfismo: gestionarReserva() ---");
+        agente.gestionarReserva(reserva1);
+        agente.emitirVoucher(reserva1);
+        System.out.println();
+
+        // --- Administrador gestiona usuarios ---
+        gerente.gestionarUsuarios(lucia, "activar");
+        gerente.crearPaquete(ballenas);
+        System.out.println();
+
+        // --- Proveedor ---
+        Proveedor hotel = new Proveedor(301, "Hotel Nuquí Pacífico", "respuesta en 2h");
+        Proveedor lanchas = new Proveedor(302, "transporte marítimo", "respuesta en 4h");
+        hotel.confirmarServicio("RES-2025-001");
+        lanchas.confirmarServicio("RES-2025-001");
+        System.out.println();
+
+        // --- Resumen final ---
+        System.out.println("======================================");
+        System.out.println("  Resumen de la operación");
+        System.out.println("======================================");
+        System.out.println(reserva1);
+        System.out.println("Cupos restantes en paquete: " + ballenas.getCuposDisponibles());
+        System.out.println("======================================");
+    }
+}
